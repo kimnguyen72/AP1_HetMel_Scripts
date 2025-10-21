@@ -2810,21 +2810,30 @@ def distPlot3(
             plt.show()
             
 #####################################################################
-
 def normalize_to_gates(adata):
     gates = adata.uns['gates']
-    # Select the 2nd column by position, not by name
-    # Use the last column in the gates DataFrame
-    gates_series = gates.iloc[:, -1]
-    gates_dict = gates_series.to_dict()
-    
-    var_names = list(adata.var_names)
+
+    # Determine if 'markers' column exists
+    if 'markers' in gates.columns:
+        markers = gates['markers'].astype(str).str.strip()
+        gate_values = gates['gates'].astype(float)
+    else:
+        # If no 'markers' column, assume index contains marker names
+        markers = gates.index.astype(str).str.strip()
+        # Take first numeric column as gates
+        numeric_cols = gates.select_dtypes(include='number').columns
+        if len(numeric_cols) == 0:
+            raise ValueError("No numeric column found in gates")
+        gate_values = gates[numeric_cols[0]].astype(float)
+
+    gates_dict = dict(zip(markers, gate_values))
+
+    var_names = [v.strip() for v in adata.var_names]
     gate_vector = np.array([gates_dict.get(marker, 0) for marker in var_names])
-    
-    # Verbose output: print the gate value for each marker
+
     print("Subtracting the following gate values from each marker:")
     for marker, gate_val in zip(var_names, gate_vector):
         print(f"  {marker}: {gate_val}")
-    
-    adata.layers["log_background_normalized"] = (adata.layers["log1p_raw"] - gate_vector)
+
+    adata.layers["log_background_normalized"] = adata.layers["log1p_raw"] - gate_vector
     print("Background normalization complete. Layer 'log_background_normalized' added.")
