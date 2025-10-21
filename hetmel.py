@@ -2814,11 +2814,10 @@ def distPlot3(
 def normalize_to_gates(adata):
     gates = adata.uns['gates']
     # Select the 2nd column by position, not by name
-    value_cols = [col for col in gates.columns if re.search("Case", col, re.IGNORECASE)]
-    if not value_cols:
-        raise ValueError("No column containing 'Case' found in gates DataFrame.")
-    gates_series = gates[value_cols[0]]
+    # Use the last column in the gates DataFrame
+    gates_series = gates.iloc[:, -1]
     gates_dict = gates_series.to_dict()
+    
     var_names = list(adata.var_names)
     gate_vector = np.array([gates_dict.get(marker, 0) for marker in var_names])
     
